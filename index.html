@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f172a">
+<title>Plan Sub-36 — Florent</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'DM Sans',sans-serif;background:#0f172a;color:#e2e8f0;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+.app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:80px}
+
+/* Header */
+.hero{background:linear-gradient(180deg,#1a0e05 0%,#0f172a 100%);padding:24px 16px 16px;text-align:center}
+.hero-sub{font-size:11px;color:#f59e0b;font-weight:700;letter-spacing:2px;text-transform:uppercase}
+.hero-title{font-size:26px;font-weight:900;color:#f8fafc;letter-spacing:-1px;margin-top:4px}
+.hero-info{font-size:12px;color:#64748b;margin-top:4px}
+
+/* Progress bar */
+.progress-wrap{margin-top:16px;display:flex;align-items:center;gap:12px;justify-content:center}
+.progress-bar{width:160px;height:8px;background:#1e293b;border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width 0.5s}
+.progress-pct{font-size:13px;font-weight:700;color:#f59e0b}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid #1e293b;position:sticky;top:0;z-index:10;background:#0f172a}
+.tab{flex:1;padding:10px 0;background:none;border:none;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
+.tab.active{color:#f59e0b;border-bottom-color:#f59e0b}
+
+/* Race countdown */
+.countdowns{display:flex;gap:10px;padding:16px;overflow-x:auto}
+.countdown-card{flex:1 0 45%;border-radius:12px;padding:14px 12px;border:1px solid #1e293b}
+.countdown-card.c0{background:linear-gradient(135deg,#064e3b,#0f172a)}
+.countdown-card.c1{background:linear-gradient(135deg,#1e3a5f,#0f172a)}
+.cd-name{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.cd-name.c0{color:#34d399}.cd-name.c1{color:#7dd3fc}
+.cd-days{font-size:28px;font-weight:900;color:#fff;margin:4px 0}
+.cd-goal{font-size:11px;color:#94a3b8}
+.cd-date{font-size:10px;color:#475569}
+
+/* Legend */
+.legend{padding:0 16px 12px;display:flex;flex-wrap:wrap;gap:6px}
+
+/* Badges */
+.badge{padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;white-space:nowrap;display:inline-block}
+.b-ef{background:#064e3b;color:#34d399}.b-seuil{background:#7c2d12;color:#fb923c}
+.b-vo2{background:#7f1d1d;color:#fca5a5}.b-spe{background:#9f1239;color:#fda4af}
+.b-renfo{background:#312e81;color:#a5b4fc}.b-velo{background:#1e3a5f;color:#7dd3fc}
+.b-long{background:#4a1d96;color:#c4b5fd}.b-rest{background:#1e293b;color:#475569}
+.b-race{background:#991b1b;color:#fff}.b-debloc{background:#065f46;color:#6ee7b7}
+
+/* Week card */
+.week{background:#0f172a;border-radius:14px;margin:0 10px 14px;border:1px solid #1e293b;overflow:hidden}
+.week.race-week{border-color:#991b1b}
+.week-header{padding:12px 14px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+.week.race-week .week-header{background:linear-gradient(135deg,#1a0505,#0f172a)}
+.wk-label{font-weight:700;font-size:14px;color:#f8fafc}
+.wk-info{font-size:11px;color:#64748b;margin-top:2px}
+.wk-right{display:flex;align-items:center;gap:10px;text-align:right}
+.wk-bar{width:50px;height:6px;background:#1e293b;border-radius:3px;overflow:hidden}
+.wk-bar-fill{height:100%;border-radius:3px;transition:width 0.3s}
+.wk-count{font-size:11px;color:#64748b;min-width:30px}
+.wk-arrow{font-size:16px;color:#475569;transition:transform 0.2s;display:inline-block}
+.wk-arrow.open{transform:rotate(180deg)}
+.week-body{display:none}.week-body.open{display:block}
+
+/* Day row */
+.day{display:grid;grid-template-columns:44px 1fr auto;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #1e293b;cursor:pointer;transition:background 0.2s}
+.day:last-child{border-bottom:none}
+.day.done{background:rgba(16,185,129,0.06);opacity:0.6}
+.day-name{font-weight:700;font-size:12px;color:#64748b}
+.day-name.race-day{color:#ef4444}
+.day-title{font-size:14px;color:#e2e8f0}
+.day.done .day-title{color:#64748b;text-decoration:line-through}
+.day-title.race-title{font-weight:700}
+.day-detail{font-size:11px;color:#475569;margin-top:2px}
+
+/* Profile section */
+.profile-section{padding:16px}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.stat{background:#0f172a;border-radius:10px;padding:10px 6px;text-align:center}
+.stat-val{font-size:16px;font-weight:800;color:#38bdf8}
+.stat-label{font-size:9px;color:#64748b;text-transform:uppercase;margin-top:3px}
+.info-card{background:#0f172a;border-radius:12px;padding:16px;margin-top:12px;border:1px solid #1e293b}
+.info-title{font-size:13px;font-weight:700;margin-bottom:12px}
+.info-title.amber{color:#f59e0b}.info-title.green{color:#10b981}.info-title.purple{color:#a5b4fc}
+.zone-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1e293b;font-size:13px}
+.nutri-item{margin-bottom:10px}
+.nutri-label{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px}
+.nutri-val{font-size:12px;color:#cbd5e1;margin-top:2px}
+.renfo-text{font-size:12px;color:#94a3b8;line-height:1.8}
+
+/* Courses tab */
+.race-card{background:#0f172a;border-radius:14px;padding:20px;margin-bottom:14px}
+.race-card.c0{border:1px solid #065f46}.race-card.c1{border:1px solid #1e3a5f}
+.rc-type{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px}
+.rc-name{font-size:18px;font-weight:900;color:#f8fafc;margin-top:6px}
+.rc-date{font-size:13px;color:#94a3b8;margin-top:4px}
+.rc-goal{font-size:20px;font-weight:900;color:#f59e0b;margin-top:10px}
+.strat-card{background:#0f172a;border-radius:14px;padding:20px;border:1px solid #1e293b}
+.strat-title{font-size:13px;font-weight:700;color:#f59e0b;margin-bottom:8px}
+.strat-text{font-size:12px;color:#94a3b8;line-height:1.8}
+
+.footer{text-align:center;padding:20px 16px 40px;font-size:10px;color:#334155}
+.footer .motto{color:#f59e0b;font-size:12px;font-weight:700;margin-top:4px}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<script>
+const STORE_KEY="florent-plan-v3";
+const RACES=[
+  {name:"Course Nature Côte 112",date:"31 mai 2026",goal:"Podium / Victoire",type:"trail",distance:"10km",ts:new Date(2026,4,31).getTime()},
+  {name:"10km Crédit Agricole Caen",date:"7 juin 2026",goal:"Sub 36:00",type:"route",distance:"10km",ts:new Date(2026,5,7).getTime()}
+];
+const PROFILE={weight:73.1,targetWeight:71,vo2max:61,pr10k:"37:10",prMarathon:"3:01"};
+const WEEKS=[
+  {id:1,label:"S1 — Reprise post-marathon",dates:"31 mars — 6 avril",focus:"Récupération",days:[
+    {day:"Lun",title:"Elliptique 30min + Abdos 15min",type:"renfo",detail:"FC<120. Abdos : Planche 3×30s → Planche lat. 2×20s/côté → Crunchs vélo 3×15 → Hollow hold 2×20s"},
+    {day:"Mar",title:"Repos ou marche active 30min",type:"rest",detail:""},
+    {day:"Mer",title:"Footing EF 30min",type:"ef",detail:"5:30/km, FC<135. Reprise douce"},
+    {day:"Jeu",title:"Elliptique 40min + Renfo jambes",type:"renfo",detail:"Jambes : Squats 3×12 → Fentes marchées 3×8/jambe → Mollets 3×20 → Chaise 3×30s. Abdos : Planche 3×30s → Relevés jambes 3×12"},
+    {day:"Ven",title:"Repos complet",type:"rest",detail:""},
+    {day:"Sam",title:"Footing EF 40min",type:"ef",detail:"5:15/km, terrain souple"},
+    {day:"Dim",title:"Vélo ou marche en famille",type:"rest",detail:"Sortie plaisir, récup active"}
+  ]},
+  {id:2,label:"S2 — Remise en route",dates:"7 — 13 avril",focus:"Reprise",days:[
+    {day:"Lun",title:"Footing EF 40min (midi)",type:"ef",detail:"5:10/km, FC 130-140"},
+    {day:"Mar",title:"Vélotaf A/R + Abdos 20min",type:"velo",detail:"32km vélo. Abdos : Planche 4×40s → Planche lat. 3×25s/côté → Crunchs vélo 3×20 → Russian twists 3×15 → Hollow hold 3×25s"},
+    {day:"Mer",title:"Footing EF 45min + 6 accélérations",type:"ef",detail:"Accélérations 80m progressives, retour marche"},
+    {day:"Jeu",title:"Renfo complet 40min",type:"renfo",detail:"Jambes : Squats 4×12 → Fentes bulgares 3×10/jambe → Mollets 3×20 → Chaise 3×40s. Abdos : Planche 4×40s → Crunchs vélo 3×20 → Relevés jambes 3×15 → Russian twists 3×20 → Hollow hold 3×25s. + Pompes 3×15"},
+    {day:"Ven",title:"Repos",type:"rest",detail:""},
+    {day:"Sam",title:"Sortie longue 1h10 EF",type:"long",detail:"~13km à 5:10/km. Allure libre, plaisir"},
+    {day:"Dim",title:"Padel ou repos actif",type:"rest",detail:""}
+  ]},
+  {id:3,label:"S3 — Début bloc intensité",dates:"14 — 20 avril",focus:"VO2max",days:[
+    {day:"Lun",title:"Footing EF 45min",type:"ef",detail:"5:10/km, finir par 4 lignes droites"},
+    {day:"Mar",title:"VMA : 10×400m à 3:25/km",type:"vo2",detail:"r=1'15 trot. Échauffement 15min EF + éducatifs"},
+    {day:"Mer",title:"Vélotaf A/R + Abdos 20min",type:"velo",detail:"32km vélo. Abdos : Planche 4×45s → Planche lat. 3×30s/côté → Crunchs vélo 3×20 → Relevés jambes 3×15 → Hollow hold 3×30s"},
+    {day:"Jeu",title:"Seuil : 2×10min à 3:55/km",type:"seuil",detail:"r=3' trot. Échauffement 15min, retour 10min EF"},
+    {day:"Ven",title:"Abdos + mobilité 20min",type:"renfo",detail:"Abdos : Planche 4×45s → Planche lat. 3×30s/côté → Russian twists 3×20 → Hollow hold 3×30s. + Pompes 3×12, mobilité hanches"},
+    {day:"Sam",title:"Sortie longue 1h20 progressive",type:"long",detail:"~15km. 40min à 5:10 → 20min à 4:40 → 20min à 4:20"},
+    {day:"Dim",title:"Renfo jambes + abdos",type:"renfo",detail:"Jambes : Squats 4×12 → Fentes marchées 3×10/jambe → Step-ups 3×12 → Mollets 3×20 → Chaise 3×45s. Abdos : Planche 4×45s → Crunchs vélo 3×20 → Relevés jambes 3×15"}
+  ]},
+  {id:4,label:"S4 — Montée en charge",dates:"21 — 27 avril",focus:"VO2max + Seuil",days:[
+    {day:"Lun",title:"Footing EF 45min + 6 lignes droites",type:"ef",detail:"Midi"},
+    {day:"Mar",title:"VMA : 8×500m à 3:25/km",type:"vo2",detail:"r=1'30 trot. Matin. 4km de qualité"},
+    {day:"Mer",title:"Vélotaf A/R + Abdos 25min",type:"velo",detail:"32km vélo. Abdos : Planche 4×45s → Planche lat. 3×30s/côté → Crunchs vélo 3×20 → Relevés jambes 3×15 → Russian twists 3×20 → Hollow hold 3×30s → Mountain climbers 3×30s"},
+    {day:"Jeu",title:"Seuil : 3×8min à 3:50/km",type:"seuil",detail:"r=2'30. Midi. 24min de qualité au seuil"},
+    {day:"Ven",title:"Repos",type:"rest",detail:""},
+    {day:"Sam",title:"Sortie longue 1h25 + 30min allure marathon",type:"long",detail:"~16km. Derniers 30min à 4:15/km"},
+    {day:"Dim",title:"Renfo complet 45min",type:"renfo",detail:"Jambes : Squats sautés 3×8 → Fentes marchées 3×10/jambe → Step-ups 3×12 → Mollets 3×20 → Chaise 3×45s. Abdos : Planche 4×45s → Planche lat. 3×30s/côté → Crunchs vélo 3×20 → Relevés jambes 3×15 → Russian twists 3×20 → Hollow hold 3×30s. + Pompes 3×15, proprioception"}
+  ]},
+  {id:5,label:"S5 — Pic d'intensité",dates:"28 avril — 4 mai",focus:"Spécifique 10km",days:[
+    {day:"Lun",title:"Footing EF 45min",type:"ef",detail:"Midi"},
+    {day:"Mar",title:"VMA : 6×800m à 3:20-3:25/km",type:"vo2",detail:"r=2' trot. Matin. Séance la plus dure du plan"},
+    {day:"Mer",title:"Vélotaf A/R + Abdos 20min",type:"velo",detail:"32km vélo. Abdos : Planche 4×45s → Planche lat. 3×30s/côté → Crunchs vélo 3×20 → Russian twists 3×20 → Hollow hold 3×30s"},
+    {day:"Jeu",title:"Spé 10km : 3×2000m à 3:36/km",type:"spe",detail:"r=2'30. ALLURE CIBLE COURSE. 6km de qualité"},
+    {day:"Ven",title:"Repos + mobilité",type:"rest",detail:""},
+    {day:"Sam",title:"Sortie longue 1h20 vallonnée",type:"long",detail:"Reconnaître le parcours Côte 112 si possible !"},
+    {day:"Dim",title:"Renfo jambes + abdos intensif 40min",type:"renfo",detail:"Jambes : Squats 4×12 → Step-ups 3×12 → Fentes marchées 3×10/jambe → Squats sautés 3×8 → Mollets 3×20 → Chaise 3×45s. Abdos : Planche 4×45s → Planche lat. 3×30s/côté → Crunchs vélo 3×20 → Relevés jambes 3×15 → Russian twists 3×20 → Hollow hold 3×30s"}
+  ]},
+  {id:6,label:"S6 — Consolidation",dates:"5 — 11 mai",focus:"Seuil + côtes",days:[
+    {day:"Lun",title:"Footing EF 40min + 6 côtes courtes",type:"ef",detail:"30s en côte. Travail puissance pour la Côte 112"},
+    {day:"Mar",title:"Seuil : 2×12min à 3:50/km",type:"seuil",detail:"r=3'. Matin. Bloc long au seuil — séance mentale"},
+    {day:"Mer",title:"Vélotaf A/R + Abdos 25min",type:"velo",detail:"32km vélo. Abdos : Planche 4×45s → Planche lat. 3×30s/côté → Crunchs vélo 3×20 → Relevés jambes 3×15 → Russian twists 3×20 → Hollow hold 3×30s → Mountain climbers 3×30s"},
+    {day:"Jeu",title:"VMA côtes : 8×1min en côte",type:"vo2",detail:"r=descente trot. Puissance + endurance musculaire"},
+    {day:"Ven",title:"Repos",type:"rest",detail:""},
+    {day:"Sam",title:"Sortie longue vallonnée 1h15",type:"long",detail:"~14km sur parcours Côte 112 ou similaire"},
+    {day:"Dim",title:"Renfo léger + étirements 30min",type:"renfo",detail:"Jambes léger : Squats 3×10 → Mollets 3×15 → Chaise 2×30s. Abdos : Planche 3×40s → Planche lat. 2×25s/côté → Hollow hold 2×25s. + Étirements 10min"}
+  ]},
+  {id:7,label:"S7 — Dernière grosse semaine",dates:"12 — 18 mai",focus:"Spécifique 10km",days:[
+    {day:"Lun",title:"Footing EF 45min",type:"ef",detail:"Midi"},
+    {day:"Mar",title:"VMA : 12×300m à 3:15/km",type:"vo2",detail:"r=1' trot. Court et rapide — vitesse pure"},
+    {day:"Mer",title:"Vélotaf A/R + Abdos 20min",type:"velo",detail:"32km vélo. Abdos : Planche 4×45s → Planche lat. 3×30s/côté → Crunchs vélo 3×20 → Relevés jambes 3×15 → Russian twists 3×20 → Hollow hold 3×30s"},
+    {day:"Jeu",title:"Spé : 2×3000m à 3:36/km",type:"spe",detail:"r=3'. Dernière grosse séance spé. Finir confiant"},
+    {day:"Ven",title:"Repos",type:"rest",detail:""},
+    {day:"Sam",title:"Sortie longue 1h10 + fartlek",type:"long",detail:"~13km. Derniers 20min en fartlek : 2' vite / 1' lent ×6"},
+    {day:"Dim",title:"Renfo maintien + abdos",type:"renfo",detail:"Jambes léger : Squats 3×10 → Fentes 3×8/jambe → Mollets 3×15. Abdos : Planche 4×45s → Planche lat. 3×30s/côté → Crunchs vélo 3×20 → Hollow hold 3×30s. + Proprioception"}
+  ]},
+  {id:8,label:"S8 — Affûtage Côte 112",dates:"19 — 25 mai",focus:"Pré-compétition",days:[
+    {day:"Lun",title:"Footing EF 40min",type:"ef",detail:"5:10/km, relâchement"},
+    {day:"Mar",title:"Rappel VMA : 6×300m à 3:20/km",type:"vo2",detail:"r=1'30. Court, vif, garder l'explosivité"},
+    {day:"Mer",title:"Footing EF 35min + 4 accélérations",type:"ef",detail:"Midi"},
+    {day:"Jeu",title:"Repos + abdos léger 15min",type:"rest",detail:"Abdos : Planche 3×30s → Planche lat. 2×20s/côté → Hollow hold 2×20s. Pas de jambes, on préserve pour dimanche"},
+    {day:"Ven",title:"Repos complet",type:"rest",detail:""},
+    {day:"Sam",title:"Déblocage 20min + 4 lignes droites",type:"debloc",detail:"Activer les jambes sans puiser dans les réserves"},
+    {day:"Dim",title:"🏁 COURSE NATURE CÔTE 112",type:"race",detail:"Objectif VICTOIRE. Attaquer les côtes à la puissance, récupérer dans les descentes"}
+  ]},
+  {id:9,label:"S9 — Semaine du 10km de Caen",dates:"1 — 7 juin",focus:"Course objectif",days:[
+    {day:"Lun",title:"Repos ou elliptique 30min",type:"rest",detail:"Récupérer de la Côte 112"},
+    {day:"Mar",title:"Footing EF 30min + 4 accélérations",type:"ef",detail:"Vérifier que les jambes répondent"},
+    {day:"Mer",title:"Rappel vitesse : 4×400m à 3:30/km",type:"vo2",detail:"r=2'. Court. Vif. Finir frais"},
+    {day:"Jeu",title:"Footing EF 25min facile",type:"ef",detail:"Midi"},
+    {day:"Ven",title:"Repos complet",type:"rest",detail:""},
+    {day:"Sam",title:"Déblocage 15min + 4 accélérations",type:"debloc",detail:"Préparer dossard, visualiser parcours, coucher tôt"},
+    {day:"Dim",title:"🏁 10KM DE CAEN — SUB 36:00",type:"race",detail:"Split négatif : km 1-3 à 3:38 → km 4-7 à 3:35 → km 8-10 à 3:30"}
+  ]}
+];
+
+// State
+let state={tab:"plan",expandedWeek:null,done:{}};
+function loadState(){try{const s=localStorage.getItem(STORE_KEY);if(s)state.done=JSON.parse(s)}catch(e){}}
+function saveDone(){try{localStorage.setItem(STORE_KEY,JSON.stringify(state.done))}catch(e){}}
+function doneKey(wId,dIdx){return wId+"-"+dIdx}
+function isDone(wId,dIdx){return!!state.done[doneKey(wId,dIdx)]}
+function toggleDone(wId,dIdx){const k=doneKey(wId,dIdx);state.done[k]=!state.done[k];if(!state.done[k])delete state.done[k];saveDone();render()}
+
+function badgeClass(t){return"badge b-"+(t||"rest")}
+function badgeLabel(t){const m={ef:"EF",seuil:"Seuil",vo2:"VO2max",spe:"Spé 10km",renfo:"Renfo",velo:"Vélo",long:"Long",rest:"Repos",race:"COURSE",debloc:"Déblocage"};return m[t]||"Repos"}
+
+function getProgress(){
+  let total=0,done=0;
+  WEEKS.forEach(w=>w.days.forEach((d,i)=>{if(d.type!=="rest"){total++;if(isDone(w.id,i))done++}}));
+  return total?Math.round(done/total*100):0;
+}
+function getWeekProgress(w){
+  let total=0,done=0;
+  w.days.forEach((d,i)=>{if(d.type!=="rest"){total++;if(isDone(w.id,i))done++}});
+  return{done,total,pct:total?Math.round(done/total*100):0};
+}
+
+function autoExpandWeek(){
+  const now=Date.now();
+  const starts=[new Date(2026,2,31),new Date(2026,3,7),new Date(2026,3,14),new Date(2026,3,21),new Date(2026,3,28),new Date(2026,4,5),new Date(2026,4,12),new Date(2026,4,19),new Date(2026,5,1)];
+  for(let i=starts.length-1;i>=0;i--){if(now>=starts[i].getTime()){state.expandedWeek=i+1;return}}
+  state.expandedWeek=1;
+}
+
+function daysLeft(ts){return Math.max(0,Math.ceil((ts-Date.now())/864e5))}
+
+function render(){
+  const gp=getProgress();
+  let h=`
+  <div class="hero">
+    <div class="hero-sub">Plan d'entraînement</div>
+    <div class="hero-title">SUB 36 & VICTOIRE</div>
+    <div class="hero-info">9 semaines · Coach Claude × Florent</div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" style="width:${gp}%;background:${gp===100?"#10b981":"linear-gradient(90deg,#f59e0b,#ef4444)"}"></div></div>
+      <span class="progress-pct">${gp}%</span>
+    </div>
+  </div>
+  <div class="tabs">
+    <button class="tab${state.tab==="plan"?" active":""}" onclick="setTab('plan')">📋 Plan</button>
+    <button class="tab${state.tab==="profil"?" active":""}" onclick="setTab('profil')">👤 Profil</button>
+    <button class="tab${state.tab==="courses"?" active":""}" onclick="setTab('courses')">🏁 Courses</button>
+  </div>`;
+
+  if(state.tab==="plan"){
+    h+=`<div class="countdowns">${RACES.map((r,i)=>`
+      <div class="countdown-card c${i}">
+        <div class="cd-name c${i}">${r.name}</div>
+        <div class="cd-days">J-${daysLeft(r.ts)}</div>
+        <div class="cd-goal">${r.goal}</div>
+        <div class="cd-date">${r.date}</div>
+      </div>`).join("")}</div>`;
+    h+=`<div class="legend">${["ef","vo2","seuil","spe","long","renfo","velo","race"].map(t=>`<span class="${badgeClass(t)}">${badgeLabel(t)}</span>`).join("")}</div>`;
+    WEEKS.forEach(w=>{
+      const wp=getWeekProgress(w);
+      const isRace=w.days.some(d=>d.type==="race");
+      const isOpen=state.expandedWeek===w.id;
+      h+=`<div class="week${isRace?" race-week":""}">
+        <div class="week-header" onclick="toggleWeek(${w.id})">
+          <div><div class="wk-label">${w.label}</div><div class="wk-info">${w.dates} · ${w.focus}</div></div>
+          <div class="wk-right">
+            <div class="wk-bar"><div class="wk-bar-fill" style="width:${wp.pct}%;background:${wp.pct===100?"#10b981":"#f59e0b"}"></div></div>
+            <span class="wk-count">${wp.done}/${wp.total}</span>
+            <span class="wk-arrow${isOpen?" open":""}">▾</span>
+          </div>
+        </div>
+        <div class="week-body${isOpen?" open":""}">`;
+      w.days.forEach((d,i)=>{
+        const dn=isDone(w.id,i);
+        h+=`<div class="day${dn?" done":""}" onclick="toggleDone(${w.id},${i})">
+          <span class="day-name${d.type==="race"?" race-day":""}">${d.day}</span>
+          <div>
+            <div class="day-title${d.type==="race"?" race-title":""}">${dn?"✓ ":""}${d.title}</div>
+            ${d.detail?`<div class="day-detail">${d.detail}</div>`:""}
+          </div>
+          <span class="${badgeClass(d.type)}">${badgeLabel(d.type)}</span>
+        </div>`;
+      });
+      h+=`</div></div>`;
+    });
+  }
+
+  if(state.tab==="profil"){
+    h+=`<div class="profile-section">
+      <div class="stat-grid">
+        ${[{v:PROFILE.weight+"kg",l:"Poids"},{v:"→"+PROFILE.targetWeight+"kg",l:"Cible"},{v:PROFILE.vo2max,l:"VO2max"},{v:PROFILE.pr10k,l:"PR 10km"}].map(s=>`
+        <div class="stat"><div class="stat-val">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join("")}
+      </div>
+      <div class="info-card">
+        <div class="info-title amber">Zones d'allure</div>
+        ${[{z:"EF",p:"5:00 — 5:30/km",fc:"125-140",c:"#34d399"},{z:"Seuil",p:"3:50 — 4:00/km",fc:"155-165",c:"#fb923c"},{z:"VO2max",p:"3:25 — 3:35/km",fc:"170-180",c:"#fca5a5"},{z:"Allure 10km",p:"3:33 — 3:36/km",fc:"165-175",c:"#fff"}].map(z=>`
+        <div class="zone-row"><span style="color:${z.c};font-weight:600">${z.z}</span><span style="color:#94a3b8">${z.p}</span><span style="color:#475569;font-size:11px">FC ${z.fc}</span></div>`).join("")}
+      </div>
+      <div class="info-card">
+        <div class="info-title green">Nutrition — objectif ${PROFILE.targetWeight}kg</div>
+        ${[{m:"Petit-déj",v:"Protéiné : œufs ou fromage blanc + flocons + fruit"},{m:"Déjeuner",v:"Protéines 150g + légumes à volonté + féculent modéré"},{m:"Dîner",v:"Léger : soupe + protéine ou salade complète"},{m:"Post-training",v:"Banane + amandes ou fromage blanc dans les 30min"}].map(r=>`
+        <div class="nutri-item"><div class="nutri-label">${r.m}</div><div class="nutri-val">${r.v}</div></div>`).join("")}
+      </div>
+      <div class="info-card">
+        <div class="info-title purple">Renfo — Abdos béton</div>
+        <div class="renfo-text"><strong style="color:#a5b4fc">Abdos 3×/sem :</strong> Planche 4×45s → Planche lat. 3×30s → Crunchs vélo 3×20 → Relevés jambes 3×15 → Russian twists 3×20 → Hollow hold 3×30s</div>
+        <div class="renfo-text" style="margin-top:10px"><strong style="color:#a5b4fc">Jambes 2×/sem :</strong> Squats 4×12 → Fentes marchées 3×10 → Step-ups 3×12 → Squats sautés 3×8 → Mollets 3×20 → Chaise 3×45s</div>
+      </div>
+    </div>`;
+  }
+
+  if(state.tab==="courses"){
+    h+=`<div class="profile-section">
+      ${RACES.map((r,i)=>`
+      <div class="race-card c${i}">
+        <div class="rc-type" style="color:${i===0?"#34d399":"#7dd3fc"}">${r.type} · ${r.distance}</div>
+        <div class="rc-name">${r.name}</div>
+        <div class="rc-date">${r.date}</div>
+        <div class="rc-goal">${r.goal}</div>
+      </div>`).join("")}
+      <div class="strat-card">
+        <div class="strat-title">Stratégie Côte 112</div>
+        <div class="strat-text">Course nature vallonnée. La course se gagne dans les côtes. Ton endurance marathon est ton arme. Attaque les montées à l'effort, récupère dans les descentes. Tu es marathonien — personne n'a ta résistance sur les 3 derniers km.</div>
+        <div class="strat-title" style="margin-top:16px">Stratégie 10km Caen — Sub 36</div>
+        <div class="strat-text">Split négatif avec PacePro : km 1-3 à 3:38 → km 4-7 à 3:35 → km 8-10 à 3:30. L'an dernier : 37:21 sur le même parcours. Avec l'arrêt de l'alcool, le renfo, et 9 semaines de spé, les 1:21 à gagner sont à portée.</div>
+      </div>
+    </div>`;
+  }
+
+  h+=`<div class="footer">Coach Claude × Florent<div class="motto">Un esprit sain dans un corps sain 💪</div>Tap une séance pour la marquer comme faite</div>`;
+  document.getElementById("app").innerHTML=h;
+}
+
+function setTab(t){state.tab=t;render()}
+function toggleWeek(id){state.expandedWeek=state.expandedWeek===id?null:id;render()}
+
+loadState();
+autoExpandWeek();
+render();
+</script>
+</body>
+</html>
