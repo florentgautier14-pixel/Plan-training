@@ -169,15 +169,63 @@ async function stravaGet(path,token){
   if(!r.ok)throw new Error("Strava API "+r.status);
   return r.json();
 }
-async function syncStrava(){
-  const inp=document.getElementById("strava-token");
-  const token=(inp?inp.value:"").trim();
-  if(!token){setSyncUI("❌ Token manquant",0);return}
-  localStorage.setItem("strava-token",token);
-  syncRun=true;setSyncUI("Connexion à Strava...",5);
+async function stravaPost(body){
+  const r=await fetch("https://www.strava.com/oauth/token",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error("Token exchange "+r.status);
+  return r.json();
+}
+function startStravaOAuth(){
+  const cid=(document.getElementById("strava-cid")?.value||"").trim();
+  const csec=(document.getElementById("strava-csec")?.value||"").trim();
+  if(!cid||!csec){alert("Entre ton Client ID et le Secret du client Strava");return}
+  localStorage.setItem("strava-cid",cid);
+  localStorage.setItem("strava-csec",csec);
+  const uri=window.location.href.split("?")[0].split("#")[0];
+  window.location.href="https://www.strava.com/oauth/authorize?client_id="+cid+"&response_type=code&redirect_uri="+encodeURIComponent(uri)+"&approval_prompt=force&scope=activity:read_all";
+}
+async function handleOAuthCallback(){
+  const params=new URLSearchParams(window.location.search);
+  const code=params.get("code");
+  if(!code)return;
+  window.history.replaceState({},"",window.location.pathname);
+  const cid=localStorage.getItem("strava-cid"),csec=localStorage.getItem("strava-csec");
+  if(!cid||!csec){state.tab="records";render();setSyncUI("❌ Client ID/Secret manquant, recommence",0);return}
+  state.tab="records";render();
+  setSyncUI("Échange du code d'autorisation...",8);
   try{
-    const me=await stravaGet("/athlete",token);
-    setSyncUI("✓ "+me.firstname+" — récupération des activités...",10);
+    const tok=await stravaPost({client_id:cid,client_secret:csec,code,grant_type:"authorization_code"});
+    localStorage.setItem("strava-token",tok.access_token);
+    localStorage.setItem("strava-refresh",tok.refresh_token);
+    localStorage.setItem("strava-expires",String(tok.expires_at));
+    setSyncUI("✓ Autorisé — lancement de la sync...",15);
+    await doSync(tok.access_token);
+  }catch(e){setSyncUI("❌ "+e.message,0)}
+}
+async function getValidToken(){
+  const exp=parseInt(localStorage.getItem("strava-expires")||"0");
+  if(Date.now()/1000<exp-60)return localStorage.getItem("strava-token");
+  const cid=localStorage.getItem("strava-cid"),csec=localStorage.getItem("strava-csec"),ref=localStorage.getItem("strava-refresh");
+  if(!cid||!csec||!ref)return null;
+  try{
+    const tok=await stravaPost({client_id:cid,client_secret:csec,refresh_token:ref,grant_type:"refresh_token"});
+    localStorage.setItem("strava-token",tok.access_token);
+    localStorage.setItem("strava-refresh",tok.refresh_token);
+    localStorage.setItem("strava-expires",String(tok.expires_at));
+    return tok.access_token;
+  }catch(e){return null}
+}
+function disconnectStrava(){
+  ["strava-token","strava-refresh","strava-expires","strava-cid","strava-csec"].forEach(k=>localStorage.removeItem(k));
+  syncMsg="";syncPct=0;render();
+}
+async function doSyncStrava(){
+  const token=await getValidToken();
+  if(!token){setSyncUI("❌ Session expirée — reconnecte-toi",0);render();return}
+  await doSync(token);
+}
+async function doSync(token){
+  syncRun=true;setSyncUI("Récupération des activités...",10);
+  try{
     let acts=[];
     for(let pg=1;pg<=3;pg++){
       const p=await stravaGet("/athlete/activities?per_page=100&page="+pg,token);
@@ -192,7 +240,7 @@ async function syncStrava(){
     const toFetch=acts.slice(0,80);
     for(let i=0;i<toFetch.length;i++){
       const a=toFetch[i];
-      setSyncUI(`Analyse ${i+1}/${toFetch.length} : ${a.name.substring(0,28)}...`,25+Math.round(i/toFetch.length*70));
+      setSyncUI(`Analyse ${i+1}/${toFetch.length} : ${a.name.substring(0,28)}`,25+Math.round(i/toFetch.length*70));
       try{
         const det=await stravaGet("/activities/"+a.id+"?include_all_efforts=true",token);
         (det.best_efforts||[]).forEach(ef=>{
@@ -432,16 +480,23 @@ function render(){
   }
 
   if(state.tab==="records"){
-    const savedToken=localStorage.getItem("strava-token")||"";
+    const hasToken=!!localStorage.getItem("strava-token");
+    const savedCid=localStorage.getItem("strava-cid")||"";
     h+=`<div class="records-section">
       <div class="strava-card">
-        <div class="strava-hdr">🟠 Sync Strava</div>
-        <div class="strava-desc">Importe tes records depuis Strava. L'app analyse les <em>best efforts</em> de tes 80 dernières courses.</div>
-        <input id="strava-token" class="strava-input" type="password" placeholder="Access token Strava..." value="${savedToken}">
-        <div class="strava-hint">→ strava.com/settings/api · Copie ton "Your Access Token"</div>
-        <button id="sync-btn" class="strava-btn" onclick="syncStrava()"${syncRun?" disabled":""}>🔄 Synchroniser avec Strava</button>
-        <div id="fetch-bar" class="fetch-bar" style="display:${syncMsg?"block":"none"}"><div id="fetch-bar-fill" class="fetch-bar-fill" style="width:${syncPct}%"></div></div>
-        <div id="sync-status" class="fetch-status">${syncMsg}</div>
+        <div class="strava-hdr">🟠 Strava</div>
+        ${hasToken
+          ?`<div class="strava-desc" style="color:#10b981;font-weight:600">✓ Compte connecté</div>
+             <button id="sync-btn" class="strava-btn" onclick="doSyncStrava()"${syncRun?" disabled":""}>🔄 Synchroniser les records</button>
+             <div id="fetch-bar" class="fetch-bar" style="display:${syncMsg?"block":"none"}"><div id="fetch-bar-fill" class="fetch-bar-fill" style="width:${syncPct}%"></div></div>
+             <div id="sync-status" class="fetch-status">${syncMsg}</div>
+             <button onclick="disconnectStrava()" style="display:block;width:100%;margin-top:10px;padding:8px;background:none;border:1px solid #334155;border-radius:8px;color:#475569;font-size:12px;cursor:pointer;font-family:inherit">Déconnecter</button>`
+          :`<div class="strava-desc">Entre tes identifiants API pour autoriser l'app avec le scope <strong>activity:read_all</strong>.</div>
+             <input id="strava-cid" class="strava-input" type="text" placeholder="Client ID (ex: 209036)" value="${savedCid}">
+             <input id="strava-csec" class="strava-input" type="password" placeholder="Secret du client..." style="margin-top:8px">
+             <div class="strava-hint">→ strava.com/settings/api</div>
+             <button class="strava-btn" onclick="startStravaOAuth()">Autoriser Strava →</button>`
+        }
       </div>`;
     DISTANCES.forEach(d=>{
       const r=records[d.key];
@@ -476,6 +531,7 @@ loadState();
 loadRecords();
 autoExpandWeek();
 render();
+handleOAuthCallback();
 </script>
 </body>
 </html>
