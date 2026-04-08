@@ -27,7 +27,7 @@ body{font-family:'DM Sans',sans-serif;background:#0f172a;color:#e2e8f0;-webkit-t
 
 /* Tabs */
 .tabs{display:flex;border-bottom:1px solid #1e293b;position:sticky;top:0;z-index:10;background:#0f172a}
-.tab{flex:1;padding:10px 0;background:none;border:none;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:1px;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
+.tab{flex:1;padding:10px 0;background:none;border:none;color:#475569;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit}
 .tab.active{color:#f59e0b;border-bottom-color:#f59e0b}
 
 /* Race countdown */
@@ -106,12 +106,112 @@ body{font-family:'DM Sans',sans-serif;background:#0f172a;color:#e2e8f0;-webkit-t
 
 .footer{text-align:center;padding:20px 16px 40px;font-size:10px;color:#334155}
 .footer .motto{color:#f59e0b;font-size:12px;font-weight:700;margin-top:4px}
+
+/* Records tab */
+.records-section{padding:16px}
+.rec-card{background:#0f172a;border-radius:14px;padding:14px 16px;margin-bottom:10px;border:1px solid #1e293b;display:flex;align-items:center;gap:14px}
+.rec-card.active{border-color:#1d3557}
+.rec-dist{width:68px;text-align:center;flex-shrink:0}
+.rec-dist-label{font-size:13px;font-weight:900;color:#f8fafc}
+.rec-dist-sub{font-size:9px;color:#475569;text-transform:uppercase;margin-top:1px}
+.rec-body{flex:1;min-width:0}
+.rec-time{font-size:22px;font-weight:900;color:#f59e0b;letter-spacing:-0.5px}
+.rec-time.empty{font-size:14px;color:#334155;font-weight:400}
+.rec-pace{font-size:12px;color:#38bdf8;font-weight:600;margin-top:1px}
+.rec-meta{font-size:11px;color:#475569;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.strava-card{background:#0f172a;border-radius:14px;padding:16px;border:1px solid rgba(252,76,2,0.4);margin-bottom:14px}
+.strava-hdr{font-size:13px;font-weight:700;color:#fc4c02;margin-bottom:6px}
+.strava-desc{font-size:11px;color:#64748b;margin-bottom:10px}
+.strava-input{width:100%;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:9px 12px;color:#e2e8f0;font-size:13px;font-family:inherit}
+.strava-hint{font-size:10px;color:#475569;margin-top:5px}
+.strava-btn{display:block;width:100%;margin-top:10px;padding:11px;background:#fc4c02;border:none;border-radius:8px;color:#fff;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;letter-spacing:0.5px}
+.strava-btn:disabled{opacity:0.4;cursor:not-allowed}
+.fetch-bar{height:3px;background:#1e293b;border-radius:2px;margin-top:10px;overflow:hidden}
+.fetch-bar-fill{height:100%;background:#fc4c02;transition:width 0.3s}
+.fetch-status{font-size:11px;color:#64748b;margin-top:6px;text-align:center;min-height:16px}
 </style>
 </head>
 <body>
 <div class="app" id="app"></div>
 <script>
 const STORE_KEY="florent-plan-v3";
+const RECORDS_KEY="florent-records-v1";
+const DISTANCES=[
+  {key:"1km",   label:"1 km",     sub:"",        meters:1000,  stravaName:"1k"},
+  {key:"1mile", label:"1 mile",   sub:"1,609 km", meters:1609,  stravaName:"1 mile"},
+  {key:"5km",   label:"5 km",     sub:"",        meters:5000,  stravaName:"5k"},
+  {key:"10km",  label:"10 km",    sub:"",        meters:10000, stravaName:"10k"},
+  {key:"15km",  label:"15 km",    sub:"",        meters:15000, stravaName:"15k"},
+  {key:"hm",    label:"Semi",     sub:"21,1 km", meters:21097, stravaName:"Half-Marathon"},
+  {key:"marathon",label:"Marathon",sub:"42,2 km",meters:42195, stravaName:"Marathon"}
+];
+let records={};
+function loadRecords(){
+  try{const s=localStorage.getItem(RECORDS_KEY);records=s?JSON.parse(s):{}}catch(e){records={}}
+  if(!records["10km"])records["10km"]={seconds:2230,date:null,activityName:"10km Caen",source:"manual"};
+  if(!records["marathon"])records["marathon"]={seconds:10860,date:null,activityName:"Marathon",source:"manual"};
+}
+function saveRecords(){try{localStorage.setItem(RECORDS_KEY,JSON.stringify(records))}catch(e){}}
+function fmtTime(s){if(!s)return"—";const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sc=s%60;return h>0?`${h}:${String(m).padStart(2,"0")}:${String(sc).padStart(2,"0")}`:`${m}:${String(sc).padStart(2,"0")}`}
+function fmtPace(s,m){if(!s||!m)return"";const p=s/(m/1000),pm=Math.floor(p/60),ps=Math.round(p%60);return`${pm}:${String(ps).padStart(2,"0")}/km`}
+function fmtDate(d){if(!d)return"";try{return new Date(d).toLocaleDateString("fr-FR",{day:"numeric",month:"short",year:"numeric"})}catch(e){return d}}
+let syncRun=false,syncMsg="",syncPct=0;
+function setSyncUI(msg,pct){
+  syncMsg=msg;syncPct=pct;
+  const s=document.getElementById("sync-status"),bar=document.getElementById("fetch-bar"),fill=document.getElementById("fetch-bar-fill"),btn=document.getElementById("sync-btn");
+  if(s)s.textContent=msg;
+  if(bar)bar.style.display=msg?"block":"none";
+  if(fill)fill.style.width=pct+"%";
+  if(btn)btn.disabled=syncRun;
+}
+async function stravaGet(path,token){
+  const r=await fetch("https://www.strava.com/api/v3"+path,{headers:{Authorization:"Bearer "+token}});
+  if(!r.ok)throw new Error("Strava API "+r.status);
+  return r.json();
+}
+async function syncStrava(){
+  const inp=document.getElementById("strava-token");
+  const token=(inp?inp.value:"").trim();
+  if(!token){setSyncUI("❌ Token manquant",0);return}
+  localStorage.setItem("strava-token",token);
+  syncRun=true;setSyncUI("Connexion à Strava...",5);
+  try{
+    const me=await stravaGet("/athlete",token);
+    setSyncUI("✓ "+me.firstname+" — récupération des activités...",10);
+    let acts=[];
+    for(let pg=1;pg<=3;pg++){
+      const p=await stravaGet("/athlete/activities?per_page=100&page="+pg,token);
+      const runs=p.filter(a=>a.type==="Run"||a.sport_type==="Run");
+      acts=[...acts,...runs];
+      setSyncUI(`${acts.length} course(s) trouvée(s)...`,10+pg*5);
+      if(p.length<100)break;
+    }
+    const effortMap={};
+    DISTANCES.forEach(d=>effortMap[d.stravaName]=d);
+    const nr={...records};
+    const toFetch=acts.slice(0,80);
+    for(let i=0;i<toFetch.length;i++){
+      const a=toFetch[i];
+      setSyncUI(`Analyse ${i+1}/${toFetch.length} : ${a.name.substring(0,28)}...`,25+Math.round(i/toFetch.length*70));
+      try{
+        const det=await stravaGet("/activities/"+a.id+"?include_all_efforts=true",token);
+        (det.best_efforts||[]).forEach(ef=>{
+          const dist=effortMap[ef.name];if(!dist)return;
+          const secs=ef.elapsed_time;
+          if(!nr[dist.key]||secs<nr[dist.key].seconds)
+            nr[dist.key]={seconds:secs,date:a.start_date_local||a.start_date,activityName:a.name,source:"strava",activityId:a.id};
+        });
+      }catch(e){}
+      if(i<toFetch.length-1)await new Promise(r=>setTimeout(r,150));
+    }
+    records=nr;saveRecords();
+    setSyncUI("✅ Sync terminée — "+acts.length+" courses analysées",100);
+    syncRun=false;render();
+  }catch(e){
+    setSyncUI("❌ "+e.message,0);syncRun=false;
+    const btn=document.getElementById("sync-btn");if(btn)btn.disabled=false;
+  }
+}
 const RACES=[
   {name:"Course Nature Côte 112",date:"31 mai 2026",goal:"Podium / Victoire",type:"trail",distance:"10km",ts:new Date(2026,4,31).getTime()},
   {name:"10km Crédit Agricole Caen",date:"7 juin 2026",goal:"Sub 36:00",type:"route",distance:"10km",ts:new Date(2026,5,7).getTime()}
@@ -248,6 +348,7 @@ function render(){
     <button class="tab${state.tab==="plan"?" active":""}" onclick="setTab('plan')">📋 Plan</button>
     <button class="tab${state.tab==="profil"?" active":""}" onclick="setTab('profil')">👤 Profil</button>
     <button class="tab${state.tab==="courses"?" active":""}" onclick="setTab('courses')">🏁 Courses</button>
+    <button class="tab${state.tab==="records"?" active":""}" onclick="setTab('records')">🏆 Records</button>
   </div>`;
 
   if(state.tab==="plan"){
@@ -330,6 +431,40 @@ function render(){
     </div>`;
   }
 
+  if(state.tab==="records"){
+    const savedToken=localStorage.getItem("strava-token")||"";
+    h+=`<div class="records-section">
+      <div class="strava-card">
+        <div class="strava-hdr">🟠 Sync Strava</div>
+        <div class="strava-desc">Importe tes records depuis Strava. L'app analyse les <em>best efforts</em> de tes 80 dernières courses.</div>
+        <input id="strava-token" class="strava-input" type="password" placeholder="Access token Strava..." value="${savedToken}">
+        <div class="strava-hint">→ strava.com/settings/api · Copie ton "Your Access Token"</div>
+        <button id="sync-btn" class="strava-btn" onclick="syncStrava()"${syncRun?" disabled":""}>🔄 Synchroniser avec Strava</button>
+        <div id="fetch-bar" class="fetch-bar" style="display:${syncMsg?"block":"none"}"><div id="fetch-bar-fill" class="fetch-bar-fill" style="width:${syncPct}%"></div></div>
+        <div id="sync-status" class="fetch-status">${syncMsg}</div>
+      </div>`;
+    DISTANCES.forEach(d=>{
+      const r=records[d.key];
+      const has=r&&r.seconds;
+      h+=`<div class="rec-card${has?" active":""}">
+        <div class="rec-dist">
+          <div class="rec-dist-label">${d.label}</div>
+          ${d.sub?`<div class="rec-dist-sub">${d.sub}</div>`:""}
+        </div>
+        <div class="rec-body">
+          ${has
+            ?`<div class="rec-time">${fmtTime(r.seconds)}</div>
+               <div class="rec-pace">${fmtPace(r.seconds,d.meters)}</div>
+               <div class="rec-meta">${[fmtDate(r.date),r.activityName].filter(Boolean).join(" · ")}</div>`
+            :`<div class="rec-time empty">Pas encore de record</div>`
+          }
+        </div>
+        <div style="font-size:16px;flex-shrink:0">${has?(r.source==="strava"?"🟠":"✏️"):""}</div>
+      </div>`;
+    });
+    h+=`</div>`;
+  }
+
   h+=`<div class="footer">Coach Claude × Florent<div class="motto">Un esprit sain dans un corps sain 💪</div>Tap une séance pour la marquer comme faite</div>`;
   document.getElementById("app").innerHTML=h;
 }
@@ -338,6 +473,7 @@ function setTab(t){state.tab=t;render()}
 function toggleWeek(id){state.expandedWeek=state.expandedWeek===id?null:id;render()}
 
 loadState();
+loadRecords();
 autoExpandWeek();
 render();
 </script>
