@@ -175,12 +175,12 @@ async function stravaPost(body){
   return r.json();
 }
 function startStravaOAuth(){
-  const cid=(document.getElementById("strava-cid")?.value||"").trim();
   const csec=(document.getElementById("strava-csec")?.value||"").trim();
-  if(!cid||!csec){alert("Entre ton Client ID et le Secret du client Strava");return}
+  if(!csec){alert("Entre le Secret du client Strava");return}
+  const cid="209036";
   localStorage.setItem("strava-cid",cid);
   localStorage.setItem("strava-csec",csec);
-  const uri=window.location.href.split("?")[0].split("#")[0];
+  const uri="http://localhost:8080";
   window.location.href="https://www.strava.com/oauth/authorize?client_id="+cid+"&response_type=code&redirect_uri="+encodeURIComponent(uri)+"&approval_prompt=force&scope=activity:read_all";
 }
 async function handleOAuthCallback(){
@@ -491,10 +491,8 @@ function render(){
              <div id="fetch-bar" class="fetch-bar" style="display:${syncMsg?"block":"none"}"><div id="fetch-bar-fill" class="fetch-bar-fill" style="width:${syncPct}%"></div></div>
              <div id="sync-status" class="fetch-status">${syncMsg}</div>
              <button onclick="disconnectStrava()" style="display:block;width:100%;margin-top:10px;padding:8px;background:none;border:1px solid #334155;border-radius:8px;color:#475569;font-size:12px;cursor:pointer;font-family:inherit">Déconnecter</button>`
-          :`<div class="strava-desc">Entre tes identifiants API pour autoriser l'app avec le scope <strong>activity:read_all</strong>.</div>
-             <input id="strava-cid" class="strava-input" type="text" placeholder="Client ID (ex: 209036)" value="${savedCid}">
-             <input id="strava-csec" class="strava-input" type="password" placeholder="Secret du client..." style="margin-top:8px">
-             <div class="strava-hint">→ strava.com/settings/api</div>
+          :`<div class="strava-desc" style="margin-bottom:10px">Une seule étape : sur <strong style="color:#e2e8f0">strava.com/settings/api → Modifier</strong>, mets <strong style="color:#fc4c02">localhost</strong> dans "Domaine de rappel".</div>
+             <input id="strava-csec" class="strava-input" type="password" placeholder="Secret du client (strava.com/settings/api)...">
              <button class="strava-btn" onclick="startStravaOAuth()">Autoriser Strava →</button>`
         }
       </div>`;
