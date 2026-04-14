@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pilotage Caristes — Infolog WMS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0f172a;
+      --surface:      #1e293b;
+      --surface2:     #263043;
+      --border:       #334155;
+      --text:         #f1f5f9;
+      --text-dim:     #94a3b8;
+      --primary:      #f59e0b;
+      --primary-dim:  rgba(245,158,11,.15);
+      --green:        #22c55e;
+      --green-dim:    rgba(34,197,94,.15);
+      --blue:         #3b82f6;
+      --blue-dim:     rgba(59,130,246,.15);
+      --danger:       #ef4444;
+      --danger-dim:   rgba(239,68,68,.12);
+      --radius:       10px;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ───────────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      flex-wrap: wrap;
+    }
+
+    .header-left { display: flex; align-items: center; gap: 14px; }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      background: var(--primary-dim);
+      color: var(--primary);
+      padding: 3px 9px;
+      border-radius: 20px;
+      letter-spacing: .04em;
+    }
+
+    .legend {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green { background: var(--green); }
+    .dot-blue  { background: var(--blue); }
+
+    /* ── BUTTONS ──────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-primary { background: var(--primary); color: #0f172a; }
+    .btn-primary:hover { background: #fbbf24; transform: translateY(-1px); }
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { border-color: var(--text-dim); color: var(--text); }
+    .btn-export {
+      background: var(--primary);
+      color: #0f172a;
+      padding: 9px 18px;
+      font-size: 0.85rem;
+      border-radius: 9px;
+      box-shadow: 0 2px 12px rgba(245,158,11,.3);
+    }
+    .btn-export:hover { background: #fbbf24; transform: translateY(-1px); }
+
+    /* ── MAIN LAYOUT ──────────────────────────────────────── */
+    .main {
+      padding: 24px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    /* ── MANAGEMENT PANELS ────────────────────────────────── */
+    .panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 700px) { .panels { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .panel-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--text-dim);
+      margin-bottom: 14px;
+    }
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 0.85rem;
+      padding: 7px 12px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    input[type="text"]::placeholder { color: var(--text-dim); }
+    input[type="text"]:focus { border-color: var(--primary); }
+
+    .btn-add {
+      background: var(--primary-dim);
+      color: var(--primary);
+      border: 1px solid rgba(245,158,11,.3);
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-family: inherit;
+      font-size: 0.82rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .btn-add:hover { background: rgba(245,158,11,.25); }
+
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 28px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 4px 6px 4px 11px;
+      font-size: 0.78rem;
+      font-weight: 500;
+    }
+    .chip-del {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0 2px;
+      display: flex;
+      align-items: center;
+      border-radius: 50%;
+      transition: all .1s;
+    }
+    .chip-del:hover { color: var(--danger); background: var(--danger-dim); }
+
+    .empty-chips {
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      padding: 4px 2px;
+      font-style: italic;
+    }
+
+    /* ── TABLE SECTION ────────────────────────────────────── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .section-header h2 { font-size: 1rem; font-weight: 700; }
+
+    .section-actions { display: flex; gap: 8px; }
+
+    .table-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    .table-scroll { overflow-x: auto; }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      min-width: 400px;
+    }
+
+    /* sticky column 0 */
+    .col-cariste {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: var(--surface2);
+      border-right: 2px solid var(--border);
+    }
+    thead .col-cariste { z-index: 4; background: var(--surface2); }
+
+    /* header row 1 – zone names */
+    thead tr:first-child th {
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 10px;
+      text-align: center;
+      font-size: 0.78rem;
+      font-weight: 700;
+      white-space: nowrap;
+      color: var(--primary);
+    }
+    thead tr:first-child th.col-cariste {
+      color: var(--text-dim);
+      text-align: left;
+      padding-left: 18px;
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    /* header row 2 – S / D labels */
+    thead tr:nth-child(2) th {
+      background: var(--surface);
+      border-bottom: 2px solid var(--border);
+      padding: 6px 10px;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      text-align: center;
+      white-space: nowrap;
+    }
+    thead tr:nth-child(2) th.th-s { color: var(--green); }
+    thead tr:nth-child(2) th.th-d { color: var(--blue);  }
+
+    /* sticky thead */
+    thead { position: sticky; top: 57px; z-index: 3; }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background .1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover td { background: rgba(255,255,255,.025); }
+    tbody tr:hover td.col-cariste { background: #2d3b52; }
+
+    td {
+      padding: 9px 10px;
+      text-align: center;
+      vertical-align: middle;
+    }
+    td.col-cariste {
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.88rem;
+      padding-left: 18px;
+      min-width: 180px;
+      max-width: 220px;
+    }
+
+    /* Zone group separator */
+    .zone-sep { border-left: 1px solid var(--border); }
+
+    /* ── TOGGLE SWITCH ────────────────────────────────────── */
+    .toggle {
+      position: relative;
+      display: inline-block;
+      width: 34px;
+      height: 19px;
+      cursor: pointer;
+    }
+    .toggle input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: var(--border);
+      border-radius: 20px;
+      transition: .2s;
+    }
+    .slider::after {
+      content: '';
+      position: absolute;
+      width: 13px;
+      height: 13px;
+      background: #fff;
+      border-radius: 50%;
+      top: 3px;
+      left: 3px;
+      transition: .2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,.4);
+    }
+    .toggle input:checked + .slider { background: var(--green); }
+    .toggle input:checked + .slider.destk { background: var(--blue); }
+    .toggle input:checked + .slider::after { left: 18px; }
+
+    /* ── SUMMARY BAR ──────────────────────────────────────── */
+    .summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      padding: 11px 18px;
+      border-top: 1px solid var(--border);
+      background: var(--surface2);
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+    .summary b { color: var(--text); }
+
+    /* ── EMPTY STATE ──────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 56px 24px;
+      color: var(--text-dim);
+    }
+    .empty-state h3 { font-size: 1rem; margin-bottom: 8px; color: var(--text); }
+    .empty-state p  { font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════
+     HEADER
+═══════════════════════════════════════════════════════════ -->
+<header>
+  <div class="header-left">
+    <h1>
+      🏭 Pilotage Caristes
+      <span class="badge">Infolog WMS</span>
+    </h1>
+    <div class="legend">
+      <div class="legend-item"><div class="dot dot-green"></div> Stockage</div>
+      <div class="legend-item"><div class="dot dot-blue"></div>  Déstockage</div>
+    </div>
+  </div>
+  <button class="btn btn-export" onclick="exportMacro()">
+    ⬇&nbsp; Exporter Macro Nexus
+  </button>
+</header>
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN
+═══════════════════════════════════════════════════════════ -->
+<div class="main">
+
+  <!-- Management panels -->
+  <div class="panels">
+
+    <!-- Caristes -->
+    <div class="panel">
+      <div class="panel-title">👷 Caristes</div>
+      <div class="input-row">
+        <input type="text" id="input-cariste" placeholder="Nom et prénom du cariste…"
+               onkeydown="if(event.key==='Enter')addCariste()">
+        <button class="btn-add" onclick="addCariste()">+ Ajouter</button>
+      </div>
+      <div class="chip-list" id="cariste-list"></div>
+    </div>
+
+    <!-- Zones -->
+    <div class="panel">
+      <div class="panel-title">📦 Zones de réapprovisionnement</div>
+      <div class="input-row">
+        <input type="text" id="input-zone" placeholder="Code / libellé de la zone…"
+               onkeydown="if(event.key==='Enter')addZone()">
+        <button class="btn-add" onclick="addZone()">+ Ajouter</button>
+      </div>
+      <div class="chip-list" id="zone-list"></div>
+    </div>
+
+  </div>
+
+  <!-- Assignment table -->
+  <div class="section-header">
+    <h2>Affectation des zones par cariste</h2>
+    <div class="section-actions">
+      <button class="btn btn-ghost" onclick="selectAll(true,'stockage')">✓ Tout stocker</button>
+      <button class="btn btn-ghost" onclick="selectAll(true,'destockage')">✓ Tout déstocker</button>
+      <button class="btn btn-ghost" onclick="selectAll(false)">✗ Tout vider</button>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-scroll">
+      <div id="table-root"></div>
+    </div>
+    <div class="summary" id="summary"></div>
+  </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════ -->
+<script>
+/* ─────────────────────────────────────────────────────────
+   STATE
+───────────────────────────────────────────────────────── */
+const STORAGE_KEY = 'caristes-wms-v1';
+
+let state = {
+  caristes:    [],   // [{ id, nom }]
+  zones:       [],   // [{ id, libelle }]
+  assignments: {}    // { "caristId-zoneId": { stockage: bool, destockage: bool } }
+};
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state = JSON.parse(raw);
+  } catch(e) { /* first load */ }
+}
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+function getAssignment(caristId, zoneId) {
+  return state.assignments[`${caristId}-${zoneId}`] || { stockage: false, destockage: false };
+}
+
+function setAssignment(caristId, zoneId, field, value) {
+  const key = `${caristId}-${zoneId}`;
+  if (!state.assignments[key]) state.assignments[key] = { stockage: false, destockage: false };
+  state.assignments[key][field] = value;
+  saveState();
+  updateSummary();
+}
+
+/* ─────────────────────────────────────────────────────────
+   CARISTES
+───────────────────────────────────────────────────────── */
+function addCariste() {
+  const input = document.getElementById('input-cariste');
+  const nom = input.value.trim();
+  if (!nom) return;
+  state.caristes.push({ id: uid(), nom });
+  input.value = '';
+  saveState();
+  render();
+  input.focus();
+}
+
+function removeCariste(id) {
+  if (!confirm('Supprimer ce cariste et toutes ses affectations ?')) return;
+  state.caristes = state.caristes.filter(c => c.id !== id);
+  Object.keys(state.assignments).forEach(k => {
+    if (k.startsWith(id + '-')) delete state.assignments[k];
+  });
+  saveState();
+  render();
+}
+
+/* ─────────────────────────────────────────────────────────
+   ZONES
+───────────────────────────────────────────────────────── */
+function addZone() {
+  const input = document.getElementById('input-zone');
+  const libelle = input.value.trim();
+  if (!libelle) return;
+  state.zones.push({ id: uid(), libelle });
+  input.value = '';
+  saveState();
+  render();
+  input.focus();
+}
+
+function removeZone(id) {
+  if (!confirm('Supprimer cette zone et toutes ses affectations ?')) return;
+  state.zones = state.zones.filter(z => z.id !== id);
+  Object.keys(state.assignments).forEach(k => {
+    if (k.endsWith('-' + id)) delete state.assignments[k];
+  });
+  saveState();
+  render();
+}
+
+/* ─────────────────────────────────────────────────────────
+   BULK SELECT
+───────────────────────────────────────────────────────── */
+function selectAll(value, field) {
+  state.caristes.forEach(c => {
+    state.zones.forEach(z => {
+      const key = `${c.id}-${z.id}`;
+      if (!state.assignments[key]) state.assignments[key] = { stockage: false, destockage: false };
+      if (field) {
+        state.assignments[key][field] = value;
+      } else {
+        state.assignments[key] = { stockage: false, destockage: false };
+      }
+    });
+  });
+  saveState();
+  render();
+}
+
+/* ─────────────────────────────────────────────────────────
+   RENDER
+───────────────────────────────────────────────────────── */
+function render() {
+  renderChips();
+  renderTable();
+  updateSummary();
+}
+
+function renderChips() {
+  const caristEl = document.getElementById('cariste-list');
+  caristEl.innerHTML = state.caristes.length === 0
+    ? '<span class="empty-chips">Aucun cariste — saisissez un nom ci-dessus</span>'
+    : state.caristes.map(c => `
+        <div class="chip">
+          ${esc(c.nom)}
+          <button class="chip-del" onclick="removeCariste('${c.id}')" title="Supprimer">×</button>
+        </div>`).join('');
+
+  const zoneEl = document.getElementById('zone-list');
+  zoneEl.innerHTML = state.zones.length === 0
+    ? '<span class="empty-chips">Aucune zone — saisissez un libellé ci-dessus</span>'
+    : state.zones.map(z => `
+        <div class="chip">
+          ${esc(z.libelle)}
+          <button class="chip-del" onclick="removeZone('${z.id}')" title="Supprimer">×</button>
+        </div>`).join('');
+}
+
+function renderTable() {
+  const root = document.getElementById('table-root');
+
+  if (state.caristes.length === 0 || state.zones.length === 0) {
+    root.innerHTML = `
+      <div class="empty-state">
+        <h3>Tableau vide</h3>
+        <p>Ajoutez au moins un cariste <strong>et</strong> une zone<br>pour afficher le tableau d'affectation.</p>
+      </div>`;
+    return;
+  }
+
+  let html = '<table>';
+
+  /* ── Header row 1 : zone names ── */
+  html += '<thead><tr>';
+  html += '<th class="col-cariste" rowspan="2">Cariste</th>';
+  state.zones.forEach((z, i) => {
+    html += `<th colspan="2"${i > 0 ? ' class="zone-sep"' : ''}>${esc(z.libelle)}</th>`;
+  });
+  html += '</tr>';
+
+  /* ── Header row 2 : S / D labels ── */
+  html += '<tr>';
+  state.zones.forEach((z, i) => {
+    html += `<th class="th-s${i > 0 ? ' zone-sep' : ''}">Stockage</th>`;
+    html += '<th class="th-d">Déstockage</th>';
+  });
+  html += '</tr></thead>';
+
+  /* ── Body ── */
+  html += '<tbody>';
+  state.caristes.forEach(c => {
+    html += `<tr><td class="col-cariste">${esc(c.nom)}</td>`;
+    state.zones.forEach((z, i) => {
+      const a   = getAssignment(c.id, z.id);
+      const sep = i > 0 ? ' class="zone-sep"' : '';
+      html += `
+        <td${sep}>
+          <label class="toggle" title="Stockage — ${esc(z.libelle)}">
+            <input type="checkbox" ${a.stockage ? 'checked' : ''}
+              onchange="setAssignment('${c.id}','${z.id}','stockage',this.checked)">
+            <span class="slider"></span>
+          </label>
+        </td>
+        <td>
+          <label class="toggle" title="Déstockage — ${esc(z.libelle)}">
+            <input type="checkbox" ${a.destockage ? 'checked' : ''}
+              onchange="setAssignment('${c.id}','${z.id}','destockage',this.checked)">
+            <span class="slider destk"></span>
+          </label>
+        </td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+
+  root.innerHTML = html;
+}
+
+function updateSummary() {
+  const nb_c = state.caristes.length;
+  const nb_z = state.zones.length;
+  let   nb_s = 0, nb_d = 0;
+  Object.values(state.assignments).forEach(a => {
+    if (a.stockage)   nb_s++;
+    if (a.destockage) nb_d++;
+  });
+  const total = nb_c * nb_z;
+  document.getElementById('summary').innerHTML = `
+    <span><b>${nb_c}</b> cariste${nb_c !== 1 ? 's' : ''}</span>
+    <span><b>${nb_z}</b> zone${nb_z !== 1 ? 's' : ''} de réapprovisionnement</span>
+    <span style="color:var(--green)"><b>${nb_s}</b> / ${total} autorisations stockage</span>
+    <span style="color:var(--blue)"><b>${nb_d}</b> / ${total} autorisations déstockage</span>`;
+}
+
+/* ─────────────────────────────────────────────────────────
+   EXPORT MACRO NEXUS
+───────────────────────────────────────────────────────── */
+function exportMacro() {
+  if (state.caristes.length === 0 || state.zones.length === 0) {
+    alert('Veuillez configurer au moins un cariste et une zone avant d\'exporter.');
+    return;
+  }
+
+  const now      = new Date();
+  const dateStr  = now.toLocaleDateString('fr-FR');
+  const timeStr  = now.toLocaleTimeString('fr-FR');
+  const sep      = '*' + '-'.repeat(56) + '*';
+
+  const L = []; // lines
+  const p = (...args) => L.push(...args);
+
+  p(sep,
+    '* MACRO NEXUS — PILOTAGE CARISTES',
+    '* Application : Infolog WMS',
+    `* Généré le   : ${dateStr} à ${timeStr}`,
+    `* Caristes    : ${state.caristes.length}`,
+    `* Zones       : ${state.zones.length}`,
+    sep,
+    '',
+    'BEGIN_MACRO',
+    '  MODULE = ZONE_PERMISSIONS',
+    '');
+
+  state.caristes.forEach((c, ci) => {
+    p(`  ${'─'.repeat(52)}`);
+    p(`  * Cariste ${ci + 1} : ${c.nom}`);
+    p(`  OPERATOR "${c.nom}"`);
+
+    let hasAny = false;
+    state.zones.forEach(z => {
+      const a  = getAssignment(c.id, z.id);
+      const st = a.stockage   ? 'OUI' : 'NON';
+      const ds = a.destockage ? 'OUI' : 'NON';
+      p(`    ZONE_PERM  ZONE="${z.libelle}"  STOCKAGE=${st}  DESTOCKAGE=${ds}`);
+      if (a.stockage || a.destockage) hasAny = true;
+    });
+
+    if (!hasAny) p('    * (aucune autorisation activée pour ce cariste)');
+    p('  END_OPERATOR', '');
+  });
+
+  p('END_MACRO',
+    '',
+    sep,
+    '* FIN DE LA MACRO',
+    sep);
+
+  const content  = L.join('\r\n');
+  const blob     = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const url      = URL.createObjectURL(blob);
+  const filename = `macro-nexus-${dateStr.replace(/\//g, '-')}.mac`;
+
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* ─────────────────────────────────────────────────────────
+   UTILS
+───────────────────────────────────────────────────────── */
+function esc(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ─────────────────────────────────────────────────────────
+   INIT
+───────────────────────────────────────────────────────── */
+loadState();
+render();
+</script>
+</body>
+</html>
